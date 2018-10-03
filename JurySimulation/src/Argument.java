@@ -6,22 +6,39 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  */
 public class Argument {
+	// id of argument
+	private int id; // TODO: more elaborate?
 	// Is argument exonerating or incriminating
 	private boolean innocent;
+
+	// instances counter
+	private static int counter = 0;
 
 	/**
 	 * Constructor of Argument class with user-specified properties
 	 * @param innocent
 	 */
 	public Argument(boolean innocent) {
+		counter++;
+		this.id = counter;
 		this.innocent = innocent;
 	}
-	
+
 	/**
 	 * Constructor of Argument class with randomly initialized properties
 	 */
 	public Argument() {
+		counter++;
+		this.id = counter;
 		this.innocent = ThreadLocalRandom.current().nextBoolean();
+	}
+
+	/**
+	 * Getter of argument's id
+	 * @return int id
+	 */
+	public int getId() {
+		return id;
 	}
 
 	/**
@@ -39,6 +56,14 @@ public class Argument {
 	public void setInnocent(boolean innocent) {
 		this.innocent = innocent;
 	}
-	
-	
+
+	@Override
+	public boolean equals(Object other) {
+		if(other instanceof Argument) {
+			return this.id == ((Argument)other).getId();
+		}
+		else {
+			return false;
+		}
+	}
 }
