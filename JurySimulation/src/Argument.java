@@ -1,5 +1,8 @@
 import java.util.concurrent.ThreadLocalRandom;
 
+
+
+
 /**
  * Argument class simulates the arguments of the argumentation simulation
  * @author Panagiotis
@@ -10,7 +13,8 @@ public class Argument {
 	private int id; // TODO: more elaborate?
 	// Is argument exonerating or incriminating
 	private boolean innocent;
-
+	// Argument type
+	private Utils.ArgumentType type;
 	// instances counter
 	private static int counter = 0;
 
@@ -18,9 +22,10 @@ public class Argument {
 	 * Constructor of Argument class with user-specified properties
 	 * @param innocent
 	 */
-	public Argument(boolean innocent) {
+	public Argument(Utils.ArgumentType type, boolean innocent) {
 		counter++;
 		this.id = counter;
+		this.type = type;
 		this.innocent = innocent;
 	}
 
@@ -30,6 +35,7 @@ public class Argument {
 	public Argument() {
 		counter++;
 		this.id = counter;
+		this.type = Utils.ArgumentType.getRandomArgumentType();
 		this.innocent = ThreadLocalRandom.current().nextBoolean();
 	}
 
@@ -55,6 +61,14 @@ public class Argument {
 	 */
 	public void setInnocent(boolean innocent) {
 		this.innocent = innocent;
+	}
+	
+	public Utils.ArgumentType getType() {
+		return type;
+	}
+
+	public void setType(Utils.ArgumentType type) {
+		this.type = type;
 	}
 
 	@Override

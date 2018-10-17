@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 /**
  * Juror class simulates the agents of the argumentation simulation
@@ -8,34 +10,50 @@ import java.util.concurrent.ThreadLocalRandom;
 public class Juror {
 	// id of argument
 	private int id; // TODO: more elaborate?
-	// Agent's probability to pay attention to a specific argument
-	private int attentionSpan;
 	// Agent's knowledge base of presented arguments they paid attention to
 	private ArrayList<Argument> knowledge;
+	// Agent's acceptance of every argument type
+	private Map<Utils.ArgumentType, Double> argumentTypeAcceptance;
 	
 	// instances counter
 	private static int counter = 0;
+	// members in a small jury
+	private static final double MIN_ACCEPTANCE = 0.6;
+	// members in a big jury
+	private static final double MAX_ACCEPTANCE = 1.0;
 		
 	/**
 	 * Constructor of Juror class with user-specified properties
-	 * @param attentionSpan required
-	 * @param knowledge required
+	 * @param argumentTypeAcceptance required
 	 */
-	public Juror(int attentionSpan) {
+	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance) {
 		counter++;
 		this.id = counter;
-		this.attentionSpan = attentionSpan;
 		this.knowledge = new ArrayList<Argument>();
+		this.argumentTypeAcceptance = argumentTypeAcceptance;
 	}
 	
 	/**
-	 * Constructor of Juror class with randomly initialized properties
+	 * Constructor of Juror class with bias
+	 * @param: biased whether the generated agent will be biased
+	 * @param: biasLevel how many claims the biased juror will have, relative to trial's num of arguments 
+	 * @param: correctVerdict the expected verdict
 	 */
-	public Juror() {
+	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance, Utils.BiasLevel biasLevel, int trialArguments, boolean correctVerdict) {
 		counter++;
 		this.id = counter;
-		this.attentionSpan = ThreadLocalRandom.current().nextInt(1,101);;
 		this.knowledge = new ArrayList<Argument>();
+		this.argumentTypeAcceptance = new HashMap<Utils.ArgumentType, Double>();
+		this.argumentTypeAcceptance.put(Utils.ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
+		this.argumentTypeAcceptance.put(Utils.ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
+		this.argumentTypeAcceptance.put(Utils.ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
+		
+		this.argumentTypeAcceptance = argumentTypeAcceptance;
+		
+		int numOfClaims = (int)(trialArguments*biasLevel.getPercentage());
+		for(int i=0; i<numOfClaims; i++) {
+			this.knowledge.add(new Argument(Utils.ArgumentType.CLAIM, !correctVerdict));
+		}
 	}
 	
 	/**
@@ -46,22 +64,6 @@ public class Juror {
 		return id;
 	}
 
-	/**
-	 * Getter of attentionSpan property
-	 * @return double attentionSpan
-	 */
-	public double getAttentionSpan() {
-		return attentionSpan;
-	}
-	
-	/**
-	 * Setter of attentionSpan property
-	 * @param attentionSpan
-	 */
-	public void setAttentionSpan(int attentionSpan) {
-		this.attentionSpan = attentionSpan;
-	}
-	
 	/**
 	 * Getter of knowledge property
 	 * @return ArrayList<Argument> knowledge
@@ -79,16 +81,25 @@ public class Juror {
 	}
 	
 	/**
-	 * Function that decides which arguments the juror remembers. Runs through the whole list of arguments.
+	 * Function that decides which arguments the juror accepts. Runs through the whole list of arguments.
 	 * @param providedArguments: all of the arguments in the current case/court
 	 */
 	public void takeInArguments(ArrayList<Argument> providedArguments) {
-		for(Argument a:providedArguments) { // for every argument
-			if(ThreadLocalRandom.current().nextInt(1,101)<=attentionSpan) { // generate a random value
-				// if it is smaller or equal to the juror's attention span, the argument is added to the juror's knowledge
-				knowledge.add(a);
-			}
+		// for every argument in the argument list
+		for(Argument a:providedArguments) {
+			// check if random chance equal or smaller than acceptance of argument type to add argument
+			this.takeInArgument(a);
 		}
+	}
+	
+	/**
+	 * Function that decides if the juror accepts an argument.
+	 * @param providedArgument: argument to decided if it is going to be accepted
+	 */
+	public void takeInArgument(Argument providedArgument) {
+		if( ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE) <= this.argumentTypeAcceptance.get(providedArgument.getType()) ) {
+			this.knowledge.add(providedArgument);
+		}	
 	}
 	
 	// TODO: not necessary?
