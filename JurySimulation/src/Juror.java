@@ -14,48 +14,53 @@ public class Juror {
 	private ArrayList<Argument> knowledge;
 	// Agent's acceptance of every argument type
 	private Map<Utils.ArgumentType, Double> argumentTypeAcceptance;
-	
+	// Agent's initiative to participate in the deliberations
+	private double participation;
+	// Agent's willingness to continue deliberating
+	private double willingness;
+
 	// instances counter
 	private static int counter = 0;
 	// members in a small jury
 	private static final double MIN_ACCEPTANCE = 0.6;
 	// members in a big jury
 	private static final double MAX_ACCEPTANCE = 1.0;
-		
+
 	/**
 	 * Constructor of Juror class with user-specified properties
 	 * @param argumentTypeAcceptance required
 	 */
-	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance) {
+	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance, double participation, double willingness) {
 		counter++;
 		this.id = counter;
 		this.knowledge = new ArrayList<Argument>();
 		this.argumentTypeAcceptance = argumentTypeAcceptance;
+		this.participation = participation;
+		this.willingness = willingness;
 	}
-	
+
 	/**
 	 * Constructor of Juror class with bias
 	 * @param: biased whether the generated agent will be biased
 	 * @param: biasLevel how many claims the biased juror will have, relative to trial's num of arguments 
 	 * @param: correctVerdict the expected verdict
 	 */
-	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance, Utils.BiasLevel biasLevel, int trialArguments, boolean correctVerdict) {
+	public Juror(Map<Utils.ArgumentType, Double> argumentTypeAcceptance, double participation, double willingness,
+			Utils.BiasLevel biasLevel, int trialArguments, ArrayList<Argument> claims) {
 		counter++;
 		this.id = counter;
-		this.knowledge = new ArrayList<Argument>();
+		this.participation = participation;
+		this.willingness = willingness;		
 		this.argumentTypeAcceptance = new HashMap<Utils.ArgumentType, Double>();
-		this.argumentTypeAcceptance.put(Utils.ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
-		this.argumentTypeAcceptance.put(Utils.ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
-		this.argumentTypeAcceptance.put(Utils.ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE));
-		
 		this.argumentTypeAcceptance = argumentTypeAcceptance;
-		
+		this.knowledge = new ArrayList<Argument>();
+		// adding claims to biased agent's knowledge base
 		int numOfClaims = (int)(trialArguments*biasLevel.getPercentage());
 		for(int i=0; i<numOfClaims; i++) {
-			this.knowledge.add(new Argument(Utils.ArgumentType.CLAIM, !correctVerdict));
+			this.knowledge.add(claims.get(i));
 		}
 	}
-	
+
 	/**
 	 * Getter of juror's id
 	 * @return int id
@@ -71,7 +76,7 @@ public class Juror {
 	public ArrayList<Argument> getKnowledge() {
 		return knowledge;
 	}
-	
+
 	/**
 	 * Setter of knowledge property
 	 * @param knowledge
@@ -79,7 +84,47 @@ public class Juror {
 	public void setKnowledge(ArrayList<Argument> knowledge) {
 		this.knowledge = knowledge;
 	}
-	
+
+	/**
+	 * Gets acceptance of each argument type
+	 * @return getArgumentTypeAcceptance
+	 */
+	public Map<Utils.ArgumentType, Double> getArgumentTypeAcceptance() {
+		return argumentTypeAcceptance;
+	}
+	/**
+	 * Sets acceptance of each argument type
+	 */
+	public void setArgumentTypeAcceptance(Map<Utils.ArgumentType, Double> argumentTypeAcceptance) {
+		this.argumentTypeAcceptance = argumentTypeAcceptance;
+	}
+	/**
+	 * Gets agent's participation
+	 * @return participation
+	 */
+	public double getParticipation() {
+		return participation;
+	}
+	/**
+	 * Sets agent's participation
+	 */
+	public void setParticipation(double participation) {
+		this.participation = participation;
+	}
+	/**
+	 * Gets agent's willingness
+	 * @return willingness
+	 */
+	public double getWillingness() {
+		return willingness;
+	}
+	/**
+	 * Sets agent's willingness
+	 */
+	public void setWillingness(double willingness) {
+		this.willingness = willingness;
+	}
+
 	/**
 	 * Function that decides which arguments the juror accepts. Runs through the whole list of arguments.
 	 * @param providedArguments: all of the arguments in the current case/court
@@ -91,7 +136,7 @@ public class Juror {
 			this.takeInArgument(a);
 		}
 	}
-	
+
 	/**
 	 * Function that decides if the juror accepts an argument.
 	 * @param providedArgument: argument to decided if it is going to be accepted
@@ -101,8 +146,45 @@ public class Juror {
 			this.knowledge.add(providedArgument);
 		}	
 	}
-	
+
 	// TODO: not necessary?
+
+	/**
+	 * Get the argument type with the highest acceptance from agent's acceptance map
+	 * @return argument type with highest acceptance
+	 */
+	public Utils.ArgumentType getNextHighestAccetingArgumentType(int trial){
+		Map<Utils.ArgumentType, Double> tempAccMapp = this.argumentTypeAcceptance;
+		Map.Entry<Utils.ArgumentType, Double> maxEntry = null;
+		for (Map.Entry<Utils.ArgumentType, Double> entry : tempAccMapp.entrySet())	{
+			if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
+				maxEntry = entry;
+			}
+		}
+		if(trial > 1) {
+			tempAccMapp.remove(maxEntry.getKey());
+		}
+		if(trial == 2) {
+			for (Map.Entry<Utils.ArgumentType, Double> entry : tempAccMapp.entrySet())	{
+				if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
+					maxEntry = entry;
+				}
+			}
+		}
+		else if(trial == 3) {
+			for (Map.Entry<Utils.ArgumentType, Double> entry : tempAccMapp.entrySet())	{
+				if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) < 0) {
+					maxEntry = entry;
+				}
+			}
+		}
+		return maxEntry.getKey();
+	}
+
+	public double penalizeWillingness(double penalty) {
+		return 0.0;
+	}
+	
 	public boolean calculateVote() {
 		int innocent = 0;
 		for(Argument a:knowledge) {
@@ -110,6 +192,13 @@ public class Juror {
 		}
 		return (innocent>=0);
 	}
-	
-	
+
+	@Override
+	public String toString() {
+		return String.format(">ID: %d.\n"
+				+ " Num of arguments in knowledge: %d.\n"
+				+ " Acceptance : %s.\n"
+				+ " Innocent suspect: %b \n",
+				this.id, this.knowledge.size(), this.argumentTypeAcceptance, calculateVote());
+	}
 }

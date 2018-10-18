@@ -1,5 +1,6 @@
 import java.util.ArrayList;
-import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -14,6 +15,8 @@ public class Court {
 	private Utils.JurySize jurySize;
 	// List of all arguments to be presented in the simulation
 	private ArrayList<Argument> argumentList;
+	// List of all claims that the jury has
+	private ArrayList<Argument> claims;
 	// verdict based on the list of all arguments
 	private boolean correctVerdict;
 	// verdict based on the votes of the jury
@@ -36,20 +39,29 @@ public class Court {
 	 * @param argumentList
 	 * @param numOfDeliberations
 	 */
-	public Court(ArrayList<Juror> jurorList, ArrayList<Argument> argumentList, Utils.VoteType voteType) {
+	public Court(ArrayList<Juror> jurorList, ArrayList<Argument> argumentList, ArrayList<Argument> claims, Utils.VoteType voteType) {
 		this.jurorList = jurorList;
 		this.argumentList = argumentList;
+		this.claims = claims;
 		this.voteType = voteType;
 		this.correctVerdict = this.calculateVerdict(this.argumentList);
 	}
 	
+	/**
+	 * Constructor of Court class with user-specified properties
+	 * @param voteType
+	 * @param numOfArguments
+	 * @param jurySize
+	 * @param numOfBiasedJurors
+	 * @param biasedDetails
+	 */
 	public Court(Utils.VoteType voteType, int numOfArguments, Utils.JurySize jurySize, int numOfBiasedJurors, int[] biasedDetails) {
 		this.voteType = voteType;
 		this.argumentList = new ArrayList<Argument>();
 		
-		// generating random arguments. 40% innocent - 60% guilty
-		int innArgs = (int)Math.floor(numOfArguments*0.4);
-		int guilArgs = (int)Math.ceil(numOfArguments*0.6);
+		// generating random types of argument. 30% innocent - 70% guilty
+		int innArgs = (int)Math.floor(numOfArguments*0.3);
+		int guilArgs = (int)Math.ceil(numOfArguments*0.7);
 		// exonerating
 		for(int i=0; i<innArgs; i++) {
 			// technical evidence
@@ -79,21 +91,30 @@ public class Court {
 		this.jurySize = jurySize;
 		this.jurorList = new ArrayList<Juror>();
 		// biased jurors
-		for(int i=0; i<biasedDetails[0]; i++) {
-			this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.CLAIM), Utils.BiasLevel.LOW, numOfArguments, this.correctVerdict));
-		}
-		for(int j=0; j<biasedDetails[1]; j++) {
-			this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.CLAIM), Utils.BiasLevel.HIGH, numOfArguments, this.correctVerdict));
+		if(numOfBiasedJurors>0) {
+			ArrayList<Argument> claims = Utils.generateClaims( (int)Math.floor(Utils.BiasLevel.HIGH.getPercentage()*this.argumentList.size()), this.correctVerdict);
+			for(int i=0; i<biasedDetails[0]; i++) {
+				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.CLAIM), 
+						ThreadLocalRandom.current().nextDouble(0.8, 1.0), 1.0,
+						Utils.BiasLevel.LOW, numOfArguments, claims));
+			}
+			for(int j=0; j<biasedDetails[1]; j++) {
+				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.CLAIM), 
+						ThreadLocalRandom.current().nextDouble(0.8, 1.0), 1.0,
+						Utils.BiasLevel.HIGH, numOfArguments, claims));
+			}
 		}
 		// neutral jurors
 		for(int i=0; i<jurySize.getsize()-numOfBiasedJurors; i++) {
 			// high evidence acceptance
 			if(ThreadLocalRandom.current().nextBoolean()) {
-				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.EVIDENCE)));
+				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.EVIDENCE),
+												ThreadLocalRandom.current().nextDouble(0.8, 1.0), 1.0));
 			}
 			// high testimony acceptance
 			else {
-				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.TESTIMONY)));
+				this.jurorList.add(new Juror(Utils.generateAcceptance(Utils.ArgumentType.TESTIMONY),
+												ThreadLocalRandom.current().nextDouble(0.8, 1.0), 1.0));
 			}
 		}		
 	}
@@ -152,15 +173,12 @@ public class Court {
 	 */
 	@Override
 	public String toString() {
-		StringBuilder sbuf = new StringBuilder();
-		Formatter fmt = new Formatter(sbuf);
-		fmt.format("Number of jurors: %d.\n"
+		return String.format("Number of jurors: %d.\n"
 				+ "Number of arguments: %d.\n"
 				+ "Innocent suspect: %s.\n"
 				+ "Voting type: %s vote.\n"
 				+ "Final verdict: %s.\n",
 				this.jurorList.size(), this.argumentList.size(), this.correctVerdict, this.voteType, this.trialVerdict);
-		return fmt.toString();
 	}
 
 	/**
@@ -168,30 +186,60 @@ public class Court {
 	 * and share it with the rest of the jury. Any jury members missing that argument, add it to their knowledge base.
 	 */
 	public void juryDeliberation() {
-		int argumentToShareIndex;
-		ArrayList<Argument> argumentsToShare = new ArrayList<Argument>();
-		// go through all the jury members
-		for(Juror j:jurorList) {
-			// a juror will deliberate only if they have at least one argument in their knowledge base
-			if(j.getKnowledge().size() > 0) {
-				// pick a random argument from the juror's knowledge base
-				argumentToShareIndex = ThreadLocalRandom.current().nextInt(0,j.getKnowledge().size());
-				Argument argumentToShare = j.getKnowledge().get(argumentToShareIndex);
-				// if it is not already included in the to-be-shared arguments, add it
-				if(!argumentsToShare.contains(argumentToShare)) {
-					argumentsToShare.add(j.getKnowledge().get(argumentToShareIndex));
+		int numOfDeliberations = 0;
+		double juryWillingness = calculateJuryWillingness(this.jurorList);
+		ArrayList<Argument> presentedArguments = new ArrayList<Argument>();
+		// keep deliberating as long as jury is willing 
+		// and not all arguments have been presented
+		// and unanimity has not been reached 
+		while(juryWillingness >= ThreadLocalRandom.current().nextDouble()
+				&& presentedArguments.size() < this.argumentList.size()
+				&& !checkVotingPrereq(this.getVoteType())) {
+			numOfDeliberations++;
+			// every juror gets a chance to speak
+			for(Juror j:this.jurorList) {
+				// if the juror wants to speak
+				if(j.getParticipation() >= ThreadLocalRandom.current().nextDouble()) {
+					boolean presented = false;
+					Map<Utils.ArgumentType, Double> tempAccMap = new HashMap<Utils.ArgumentType, Double>(j.getArgumentTypeAcceptance());
+					// while juror has not presented an argument and has arguments in his knowledge base that have not been presented
+					while(!presented && tempAccMap.size()>0) {
+						// get the next type with the highest acceptance
+						Utils.ArgumentType argType = Utils.getMaxValueKey(tempAccMap);
+						int argIndex = 0;
+						// while juror has not presented, search through juror's arguments to choose one to present
+						while(!presented && argIndex < j.getKnowledge().size()) {
+							ArrayList<Argument> currJurorKnowledge = j.getKnowledge();
+							// if juror current argument is of the specified type and it has not been presented
+							if(currJurorKnowledge.get(argIndex).getType().equals(argType) && !presentedArguments.contains(currJurorKnowledge.get(argIndex))) {
+								Argument presentedArgument = currJurorKnowledge.get(argIndex);
+								// present argument to all other jurors
+								for(Juror listeningJuror:this.jurorList) {
+									// if it is not the presenting juror
+									if(!listeningJuror.equals(j)) {
+										listeningJuror.takeInArgument(presentedArgument);
+									}
+								}
+								// juror presented an argument
+								presented = true;
+								// argument is added to presented arguments to avoid repetition
+								presentedArguments.add(presentedArgument);
+							}
+							// else go to next argument
+							else {
+								argIndex++;
+							}
+						}
+						tempAccMap.remove(argType);
+					}
 				}
-			}			
-		}
-		// traverse all jury members again
-		for(Juror j:jurorList) {
-			for(Argument a:argumentsToShare) {
-				// add any shared argument that is not already in the juror's knowledge base
-				if(!j.getKnowledge().contains(a)) {
-					j.getKnowledge().add(a);
-				}
+				// after jurors got a chance to present, reduce the individual willingness
+				j.setWillingness(j.getWillingness()*(1-this.voteType.getPenalty()));
 			}
+			// recalculate jury's willingness
+			juryWillingness = calculateJuryWillingness(this.jurorList);
 		}
+		System.out.println("Number of deliberations: " + numOfDeliberations);
 	}
 
 	/**
@@ -203,7 +251,7 @@ public class Court {
 			innocent = (calculateVerdict(j.getKnowledge())) ? innocent+1 : innocent-1;
 		}
 		// unanimous voting system
-		if(this.voteType.equals("unanimous")) {
+		if(this.voteType.equals(Utils.VoteType.UNANIMOUS)) {
 			// all of the jury members support "guilty" verdict
 			if( (innocent < 0) && (Math.abs(innocent)==this.jurorList.size()) ) {
 				this.trialVerdict = "guilty";
@@ -248,5 +296,29 @@ public class Court {
 		return (innocent>=0);
 	}
 
+	/**
+	 * Calculates the jury's average willingness to continue deliberating
+	 * @param jurorList
+	 * @return groupWillingness
+	 */
+	private double calculateJuryWillingness(ArrayList<Juror> jurorList) {
+		double totalWillingness = 0.0;
+		for(Juror j:jurorList) {
+			totalWillingness += j.getWillingness();
+		}
+		return totalWillingness/jurorList.size();
+	}
 
+	private boolean checkVotingPrereq(Utils.VoteType voteType) {
+		int innocent = 0;
+		for(Juror j:this.jurorList) {
+			innocent = (j.calculateVote()) ? innocent+1 : innocent-1;
+		}
+		if(voteType.equals(Utils.VoteType.UNANIMOUS)) {
+			return (Math.abs(innocent)==this.jurorList.size());
+		}
+		else {
+			return (Math.abs(innocent) >= (Math.floorDiv(this.jurorList.size(),2) + 1) );
+		}
+	}
 }

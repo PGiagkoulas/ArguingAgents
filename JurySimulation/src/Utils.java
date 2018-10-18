@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -24,16 +25,23 @@ public	 class Utils {
 	 * Enumerator from the different argument types
 	 */
 	public enum VoteType{
-		UNANIMOUS,
-		MAJORITY;
+		UNANIMOUS (0.0),
+		MAJORITY (0.075);
+		private final double penalty;
+		private VoteType(double penalty) {
+			this.penalty = penalty;
+		}
+		public double getPenalty() {
+			return this.penalty;
+		}
 	}
 	
 	/**
 	 * Enumerator from the different Bias levels
 	 */
 	public enum BiasLevel{
-		LOW (0.1),
-		HIGH (0.5);
+		LOW (0.05),
+		HIGH (0.15);
 		private final double percentage;
 		private BiasLevel(double percentage) {
 			this.percentage = percentage;
@@ -73,29 +81,51 @@ public	 class Utils {
 			break;
 		case TESTIMONY:
 			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.8, 1.0));
-			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
-			acceptanceMap.put(ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(0.2, 0.4));
+			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.1, 0.2));
+			acceptanceMap.put(ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
 			break;
 		case EVIDENCE:
 			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.8, 1.0));
-			acceptanceMap.put(ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
-			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.2, 0.4));
+			acceptanceMap.put(ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
+			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.1, 0.2));
 			break;
 		default:
 		}
 		return acceptanceMap;
 	}
 	
+	/**
+	 * Get the key of the <key,value> pair with max value
+	 * @param tempMap
+	 * @return key of maxEntry
+	 */
+	public static ArgumentType getMaxValueKey(Map<ArgumentType, Double> tempMap){
+		Map.Entry<ArgumentType, Double> maxEntry = null;
+		for (Map.Entry<ArgumentType, Double> entry : tempMap.entrySet())	{
+			if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0) {
+				maxEntry = entry;
+			}
+		}
+		return maxEntry.getKey();
+	}
 	
 	/**
 	 * Prompting message to user
 	 */
-	public static int getSimulationNumberFromuser() {
+	public static int getSimulationNumberFromUser() {
 		Scanner reader = new Scanner(System.in);  // Reading from System.in
 		System.out.println("Enter number of simulations: ");
 		int numOfSimulations = reader.nextInt(); // Scans the next token of the input as an int.
 		//once finished
 		reader.close();
 		return numOfSimulations;
+	}
+
+	public static ArrayList<Argument> generateClaims(int numOfClaims, boolean correctVerdict){
+		ArrayList<Argument> claims = new ArrayList<Argument>();
+		for(int i=0; i<numOfClaims; i++) {
+			claims.add(new Argument(Utils.ArgumentType.CLAIM, !correctVerdict));
+		}
+		return claims;
 	}
 }
