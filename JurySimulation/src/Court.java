@@ -338,6 +338,9 @@ public class Court {
 				typeDistribution.put(a.getType(), new Double(1));
 			}			
 		}
+		for(Map.Entry<Utils.ArgumentType, Double> entry : typeDistribution.entrySet()) {
+			entry.setValue(100*entry.getValue()/(this.assignedClaims.size()+this.argumentList.size()));
+		}
 		return typeDistribution;
 	}
 	

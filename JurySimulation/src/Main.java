@@ -10,11 +10,11 @@ public class Main {
 		int falsePositive = 0, falseNegative = 0, hungJury = 0, correctVerdicts = 0;
 		Map<Utils.ArgumentType, Double> totalTrialArgTypeDistr = new HashMap<Utils.ArgumentType, Double>();
 		Map<Utils.ArgumentType, Double> totalJuryArgTypeDistr = new HashMap<Utils.ArgumentType, Double>();
-		PrintWriter out = new PrintWriter("results.txt");
+		PrintWriter out = new PrintWriter("U12.txt");
 		for(int i=1; i<=numOfSimulations; i++) {
 			System.out.println("\n=========================================================\n");
 			// initialize a simulation
-			Court simulation = new Court(Utils.VoteType.MAJORITY, 100, Utils.JurySize.BIG, 3, new int[]{0,3});
+			Court simulation = new Court(Utils.VoteType.UNANIMOUS, 100, Utils.JurySize.BIG, 0, new int[]{0,0});
 			System.out.println("Suspect is innocent: " + simulation.isCorrectVerdict());
 			// arguments are presented to the jury
 			simulation.provideArguments();
