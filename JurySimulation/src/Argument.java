@@ -1,3 +1,4 @@
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 
@@ -10,7 +11,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class Argument {
 	// id of argument
-	private int id; // TODO: more elaborate?
+	private UUID id; // TODO: more elaborate?
 	// Is argument exonerating or incriminating
 	private boolean innocent;
 	// Argument type
@@ -24,7 +25,7 @@ public class Argument {
 	 */
 	public Argument(Utils.ArgumentType type, boolean innocent) {
 		counter++;
-		this.id = counter;
+		this.id = UUID.randomUUID();
 		this.type = type;
 		this.innocent = innocent;
 	}
@@ -34,7 +35,7 @@ public class Argument {
 	 */
 	public Argument() {
 		counter++;
-		this.id = counter;
+		this.id = UUID.randomUUID();
 		this.type = Utils.ArgumentType.getRandomArgumentType();
 		this.innocent = ThreadLocalRandom.current().nextBoolean();
 	}
@@ -43,7 +44,7 @@ public class Argument {
 	 * Getter of argument's id
 	 * @return int id
 	 */
-	public int getId() {
+	public UUID getId() {
 		return id;
 	}
 
@@ -74,7 +75,7 @@ public class Argument {
 	@Override
 	public boolean equals(Object other) {
 		if(other instanceof Argument) {
-			return this.id == ((Argument)other).getId();
+			return this.id.equals(((Argument)other).getId());
 		}
 		else {
 			return false;

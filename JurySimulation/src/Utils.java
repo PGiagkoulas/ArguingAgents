@@ -25,7 +25,7 @@ public	 class Utils {
 	 * Enumerator from the different argument types
 	 */
 	public enum VoteType{
-		UNANIMOUS (0.0),
+		UNANIMOUS (0.02),
 		MAJORITY (0.075);
 		private final double penalty;
 		private VoteType(double penalty) {
@@ -40,8 +40,8 @@ public	 class Utils {
 	 * Enumerator from the different Bias levels
 	 */
 	public enum BiasLevel{
-		LOW (0.05),
-		HIGH (0.15);
+		LOW (0.10),
+		HIGH (0.20);
 		private final double percentage;
 		private BiasLevel(double percentage) {
 			this.percentage = percentage;
@@ -75,19 +75,19 @@ public	 class Utils {
 		Map<ArgumentType, Double> acceptanceMap = new HashMap<ArgumentType, Double>();
 		switch(argtype) {
 		case CLAIM:
-			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.8, 1.0));
-			acceptanceMap.put(ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
-			acceptanceMap.put(ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(0.2, 0.4));
+			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.7, 0.85));
+			acceptanceMap.put(ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(0.35, 0.55));
+			acceptanceMap.put(ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
 			break;
 		case TESTIMONY:
-			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.8, 1.0));
-			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.1, 0.2));
+			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.7, 0.85));
+			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.2, 0.4));
 			acceptanceMap.put(ArgumentType.EVIDENCE, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
 			break;
 		case EVIDENCE:
-			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.8, 1.0));
+			acceptanceMap.put(argtype, ThreadLocalRandom.current().nextDouble(0.7, 0.85));
+			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.2, 0.4));
 			acceptanceMap.put(ArgumentType.TESTIMONY, ThreadLocalRandom.current().nextDouble(0.4, 0.6));
-			acceptanceMap.put(ArgumentType.CLAIM, ThreadLocalRandom.current().nextDouble(0.1, 0.2));
 			break;
 		default:
 		}

@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -22,7 +23,7 @@ public class Juror {
 	// instances counter
 	private static int counter = 0;
 	// members in a small jury
-	private static final double MIN_ACCEPTANCE = 0.6;
+	private static final double MIN_ACCEPTANCE = 0.0;
 	// members in a big jury
 	private static final double MAX_ACCEPTANCE = 1.0;
 
@@ -56,6 +57,7 @@ public class Juror {
 		this.knowledge = new ArrayList<Argument>();
 		// adding claims to biased agent's knowledge base
 		int numOfClaims = (int)(trialArguments*biasLevel.getPercentage());
+		Collections.shuffle(claims);
 		for(int i=0; i<numOfClaims; i++) {
 			this.knowledge.add(claims.get(i));
 		}
@@ -142,7 +144,8 @@ public class Juror {
 	 * @param providedArgument: argument to decided if it is going to be accepted
 	 */
 	public void takeInArgument(Argument providedArgument) {
-		if( ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE) <= this.argumentTypeAcceptance.get(providedArgument.getType()) ) {
+		if( ThreadLocalRandom.current().nextDouble(MIN_ACCEPTANCE, MAX_ACCEPTANCE) <= this.argumentTypeAcceptance.get(providedArgument.getType()) 
+				&& !this.knowledge.contains(providedArgument)) {
 			this.knowledge.add(providedArgument);
 		}	
 	}
@@ -181,16 +184,24 @@ public class Juror {
 		return maxEntry.getKey();
 	}
 
-	public double penalizeWillingness(double penalty) {
-		return 0.0;
-	}
-	
+	/**
+	 * Calculates the jurors current vote/opinion
+	 * @return innocent=false if most arguments in knowledge are negative. True otherwise.
+	 */
 	public boolean calculateVote() {
 		int innocent = 0;
 		for(Argument a:knowledge) {
 			innocent = (a.isInnocent()) ? innocent+1 : innocent-1;
 		}
 		return (innocent>=0);
+	}
+	
+	public int testVoteScore() {
+		int innocent = 0;
+		for(Argument a:knowledge) {
+			innocent = (a.isInnocent()) ? innocent+1 : innocent-1;
+		}
+		return innocent;
 	}
 
 	@Override
@@ -200,5 +211,56 @@ public class Juror {
 				+ " Acceptance : %s.\n"
 				+ " Innocent suspect: %b \n",
 				this.id, this.knowledge.size(), this.argumentTypeAcceptance, calculateVote());
+	}
+	
+	/**
+	 * Method to calculate the argument type statistics for the Juror
+	 * @return Map<Utils.ArgumentType, Double> stats
+	 */
+	public Map<Utils.ArgumentType, Double> calculateArgumentTypeStatistics(){
+		Map<Utils.ArgumentType, Double> stats = new HashMap<Utils.ArgumentType, Double>();
+		for(Argument a:this.knowledge) {
+			if(stats.containsKey(a.getType())){
+				stats.put(a.getType(), stats.get(a.getType())+1);
+			}
+			else
+			{
+				stats.put(a.getType(), new Double(1));
+			}			
+		}
+		for(Map.Entry<Utils.ArgumentType, Double> entry : stats.entrySet()) {
+			entry.setValue(entry.getValue()/this.knowledge.size());
+		}
+		return stats;
+	}
+	
+	/**
+	 * Method to calculate the argument side statistics for the Juror
+	 * @return Map<Sting, Double> stats
+	 */
+	public Map<String, Double> calculateArgumentSideStatistics(){
+		Map<String, Double> stats = new HashMap<String, Double>();
+		double positive = 0, negative = 0;
+		for(Argument a:this.knowledge) {
+			if(a.isInnocent()) {
+				positive++;
+			}
+			else {
+				negative++;
+			}
+		}
+		stats.put("Exonerating", positive/this.knowledge.size());
+		stats.put("Incriminating", negative/this.knowledge.size());
+		return stats;
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if(other instanceof Juror) {
+			return this.id == (((Juror)other).getId());
+		}
+		else {
+			return false;
+		}
 	}
 }
