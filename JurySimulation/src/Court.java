@@ -29,7 +29,15 @@ public class Court {
 	private String trialVerdict;
 	// type of vote
 	private Utils.VoteType voteType;
-
+	
+	// Statistics counters
+	// number of deliberations that took place
+	private int totalDeliberations;
+	private int totalClaimsSpread;
+	private double avgClaimSpread;
+	private int totalNonClaimsSpread;
+	private double avgNonClaimSpread;
+	
 	// minimum number of arguments in a case
 	private static final int MIN_NUM_ARG = 20;
 	// maximum number of arguments in a case
@@ -183,6 +191,35 @@ public class Court {
 	}
 
 	/**
+	 * Gets the average spread of claims through all deliberation rounds
+	 * @return avgClaimSpread
+	 */
+	public double getAvgClaimSpread() {
+		return avgClaimSpread;
+	}
+	
+
+	/**
+	 * Gets the average spread of non-claim arguments through all deliberation rounds
+	 * @return avgNonClaimsSpread
+	 */
+
+
+	public double getAvgNonClaimsSpread() {
+		return avgNonClaimSpread;
+	}
+	
+	/**
+	 * Get total number of deliberations	
+	 * @return totalDeliberations
+	 */
+
+	public int getTotalDeliberations() {
+		return totalDeliberations;
+	}
+	
+
+	/**
 	 * Emulates the presentation of arguments to all jury members.
 	 */
 	public void provideArguments() {
@@ -209,7 +246,13 @@ public class Court {
 	 * and share it with the rest of the jury. Any jury members missing that argument, add it to their knowledge base.
 	 */
 	public void juryDeliberation() {
-		int numOfDeliberations = 0;
+		// initialize statistics
+		this.totalDeliberations = 0;
+		this.totalClaimsSpread = 0;
+		this.avgClaimSpread = 0;
+		this.totalNonClaimsSpread = 0;
+		this.avgNonClaimSpread = 0;
+		// get initial jury willingness
 		double juryWillingness = calculateJuryWillingness(this.jurorList);
 		Map<Argument, Integer> presentedArguments = new HashMap<Argument, Integer>();
 		// keep deliberating as long as jury is willing 
@@ -218,7 +261,7 @@ public class Court {
 		while(juryWillingness >= ThreadLocalRandom.current().nextDouble()
 				&& presentedArguments.size() < (this.argumentList.size() + this.assignedClaims.size())
 				) {
-			numOfDeliberations++;
+			this.totalDeliberations++;
 			// every juror gets a chance to speak
 			for(Juror j:this.jurorList) {
 				// if the juror wants to speak
@@ -246,7 +289,17 @@ public class Court {
 								for(Juror listeningJuror:this.jurorList) {
 									// if it is not the presenting juror
 									if(!listeningJuror.equals(j)) {
+										int prevSize = listeningJuror.getKnowledge().size();										
 										listeningJuror.takeInArgument(argumentToPresent);
+										// keep track of accepted arguments
+										if(listeningJuror.getKnowledge().size() > prevSize) {
+											if(argumentToPresent.getType().equals(Utils.ArgumentType.CLAIM)) {
+												this.totalClaimsSpread++;
+											}
+											else {
+												this.totalNonClaimsSpread++;
+											}
+										}
 									}
 								}
 								// juror presented an argument
@@ -269,7 +322,7 @@ public class Court {
 					}
 				}
 				// after 10 deliberations
-				if(numOfDeliberations > 10) {
+				if(this.totalDeliberations > 10) {
 					// after jurors got a chance to present, reduce the individual willingness
 					j.setWillingness(j.getWillingness()*(1-this.voteType.getPenalty()));
 				}
@@ -277,7 +330,13 @@ public class Court {
 			// recalculate jury's willingness
 			juryWillingness = calculateJuryWillingness(this.jurorList);
 		}
-		System.out.println("Number of deliberations: " + numOfDeliberations);
+		this.avgClaimSpread = (double)this.totalClaimsSpread/this.totalDeliberations;
+		this.avgNonClaimSpread = (double)this.totalNonClaimsSpread/this.totalDeliberations;
+		System.out.println("Number of deliberations: " + this.totalDeliberations);
+		System.out.println("Number of non-claims spread in deliberation: " + this.totalNonClaimsSpread);
+		System.out.println("Number of claims spread in deliberation: " + this.totalClaimsSpread);
+		System.out.println("Average non-claim spread: " + this.avgClaimSpread);
+		System.out.println("Average claim spread: " + this.avgNonClaimSpread);
 	}
 
 	/**
