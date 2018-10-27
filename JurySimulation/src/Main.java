@@ -14,12 +14,13 @@ public class Main {
 		// results file
 		PrintWriter out = new PrintWriter("results.txt");
 		// number of simulations
-		int numOfSimulations = Utils.getSimulationNumberFromUser();
+		MenuSelectionObject mso = Utils.getSimulationParametersFromUser();
 		// go
-		for(int i=1; i<=numOfSimulations; i++) {
+		for(int i=1; i<=mso.getNumOfSimulations(); i++) {
 			System.out.println("\n=========================================================\n");
 			// initialize a simulation
-			Court simulation = new Court(Utils.VoteType.MAJORITY, 100, Utils.JurySize.BIG, 4, new int[]{2,2});
+			Court simulation = new Court(mso.getVoteChoice(), mso.getArgumentChoice(), mso.getJuryChoice(), 
+											mso.getBiasedChoice(), new int[]{mso.getLowBiasedChoice(), mso.getHighBiasedChoice()});
 			System.out.println("Suspect is innocent: " + simulation.isCorrectVerdict());
 			// arguments are presented to the jury
 			simulation.provideArguments();
@@ -75,14 +76,14 @@ public class Main {
 			System.out.println(simulation.isTrialVerdict());
 		}
 		// last calcs on statistics
-		totalAvgClaimSpread = totalAvgClaimSpread/numOfSimulations;
-		totalAvgNonClaimSpread = totalAvgNonClaimSpread/numOfSimulations;
-		avgDeliberations = avgDeliberations/numOfSimulations;
+		totalAvgClaimSpread = totalAvgClaimSpread/mso.getNumOfSimulations();
+		totalAvgNonClaimSpread = totalAvgNonClaimSpread/mso.getNumOfSimulations();
+		avgDeliberations = avgDeliberations/mso.getNumOfSimulations();
 		for(Map.Entry<Utils.ArgumentType, Double> entry : totalTrialArgTypeDistr.entrySet()) {
-			entry.setValue(entry.getValue()/numOfSimulations);
+			entry.setValue(entry.getValue()/mso.getNumOfSimulations());
 		}
 		for(Map.Entry<Utils.ArgumentType, Double> entry : totalJuryArgTypeDistr.entrySet()) {
-			entry.setValue(entry.getValue()/numOfSimulations);
+			entry.setValue(entry.getValue()/mso.getNumOfSimulations());
 		}
 		// console printing
 		System.out.println(String.format("> For an average of %.2f deliberations per simulation: \n"
@@ -100,14 +101,25 @@ public class Main {
 									   totalAvgClaimSpread,
 									   totalAvgNonClaimSpread));
 		System.out.println(String.format("* Wrong Verdicts: %d\n"
-						 + "* Hung Juries: %d\n"
-						 + "* Correct Verdicts: %d",
-						 falseNegative+falsePositive, hungJury, correctVerdicts));
+									   + "* Hung Juries: %d\n"
+									   + "* Correct Verdicts: %d",
+										 falseNegative+falsePositive, hungJury, correctVerdicts));
 		
 		// Output statistics to file
-		out.println("\n==================== Accuracy of " + numOfSimulations + " simulations ========================\n");
-		out.println(String.format("trial averages: Evidence : %.2f %%  Testimonies: %.2f %%  Claims: %.2f %% \n"
-				   + "jury averages: Evidence: %.2f %%  Testimonies: %.2f %%  Claims: %.2f %% \n", 
+		out.println("\n==================== Experiment Parameters ========================\n");
+		out.println(String.format("Jury size: %d\n"
+								+ "Voting system: %s\n"
+								+ "Total number of arguments: %d\n"
+								+ "Biased agents in total: %d, low bias level: %d, high bias level: %d\n"
+								+ "Number of simulations ran: %d\n", 
+								  mso.getJuryChoice().getsize(),
+								  mso.getVoteChoice().toString(),
+								  mso.getArgumentChoice(),
+								  mso.getBiasedChoice(), mso.getLowBiasedChoice(), mso.getHighBiasedChoice(),
+								  mso.getNumOfSimulations()));
+		out.println("\n==================== Accuracy of " + mso.getNumOfSimulations() + " simulations ========================\n");
+		out.println(String.format("Trial argument type distribution: Evidence : %.2f %%  Testimonies: %.2f %%  Claims: %.2f %% \n"
+				   + "Jury argument type distribution after deliberations: Evidence: %.2f %%  Testimonies: %.2f %%  Claims: %.2f %% \n", 
 				   totalTrialArgTypeDistr.get(Utils.ArgumentType.EVIDENCE), 
 				   totalTrialArgTypeDistr.get(Utils.ArgumentType.TESTIMONY),
 				   totalTrialArgTypeDistr.get(Utils.ArgumentType.CLAIM),
@@ -115,9 +127,9 @@ public class Main {
 				   totalJuryArgTypeDistr.get(Utils.ArgumentType.TESTIMONY),
 				   totalJuryArgTypeDistr.get(Utils.ArgumentType.CLAIM)));		
 		out.println(String.format("* Wrong Verdicts: %d\n"
-				 + "* Hung Juries: %d\n"
-				 + "* Correct Verdicts: %d",
-				 falseNegative+falsePositive, hungJury, correctVerdicts));
+								+ "* Hung Juries: %d\n"
+								+ "* Correct Verdicts: %d",
+								  falseNegative+falsePositive, hungJury, correctVerdicts));
 		
 		out.close();
 	}

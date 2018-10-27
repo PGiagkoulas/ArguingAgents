@@ -112,13 +112,34 @@ public	 class Utils {
 	/**
 	 * Prompting message to user
 	 */
-	public static int getSimulationNumberFromUser() {
+	public static MenuSelectionObject getSimulationParametersFromUser() {
 		Scanner reader = new Scanner(System.in);  // Reading from System.in
+		System.out.println("Choose jury size (enter: 1 or 2):\n"
+						 + "1. 6-member jury \n"
+						 + "2. 12-member jury\n");
+		int juryChoice = reader.nextInt();
+		System.out.println("Choose voting system (enter: 1 or 2):\n"
+						 + "1. Unanimous\n"
+						 + "2. Majority\n");
+		int voteChoice = reader.nextInt();
+		System.out.println("Enter number of arguments (enter: 25 to 500):\n");
+		int argumentChoice = reader.nextInt();
+		System.out.println("Enter number of biased agents (enter: 0 to selected jury size):\n");
+		int biasedChoice = reader.nextInt();
+		int lowBiasedChoice = 0, highBiasedChoice = 0;
+		if(biasedChoice>0) {
+			System.out.println("Enter number of agents with low bias (enter: 0 to selected number of biased agents):\n");
+			lowBiasedChoice = reader.nextInt();
+			System.out.println("Enter number of agents with high bias (enter: 0 to selected number of biased agents):\n");
+			highBiasedChoice = reader.nextInt();
+		}
 		System.out.println("Enter number of simulations: ");
 		int numOfSimulations = reader.nextInt(); // Scans the next token of the input as an int.
 		//once finished
 		reader.close();
-		return numOfSimulations;
+		
+		MenuSelectionObject mso = new MenuSelectionObject(juryChoice, voteChoice, argumentChoice, biasedChoice, lowBiasedChoice, highBiasedChoice, numOfSimulations);
+		return mso;
 	}
 
 	public static ArrayList<Argument> generateClaims(int numOfClaims, boolean correctVerdict){
